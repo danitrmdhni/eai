@@ -1,218 +1,164 @@
-# Dokumentasi API Sistem Manajemen Gudang
+# Dokumentasi API Sistem Integrasi Antar Layanan
 
-## Autentikasi
+## Overview
+Sistem ini terdiri dari tiga layanan utama yang berkomunikasi satu sama lain menggunakan REST API:
+- UserService (Port 5001)
+- ProductService (Port 5002)
+- OrderService (Port 5003)
 
-Semua endpoint API memerlukan autentikasi menggunakan session login.
+## UserService API
 
-### Login
+### Provider Endpoints
 
-```
-POST /login
-```
+#### GET /api/users
+Mengambil daftar semua user.
 
-Request body:
-```json
-{
-    "username": "string",
-    "password": "string"
-}
-```
-
-Response success (200):
-```json
-{
-    "message": "Login berhasil",
-    "user": {
-        "username": "string",
-        "name": "string",
-        "role": "string"
-    }
-}
-```
-
-## Endpoint Inventory
-
-### Get All Items
-
-```
-GET /api/inventory
-```
-
-Response success (200):
+Response:
 ```json
 [
-    {
-        "id": "ITEM001",
-        "name": "string",
-        "quantity": 0,
-        "category": "string",
-        "added_by": "string",
-        "last_update": "datetime string"
-    }
+  {
+    "id": 1,
+    "name": "John Doe",
+    "email": "john@example.com"
+  }
 ]
 ```
 
-### Add New Item
+#### GET /api/users/{id}
+Mengambil detail user berdasarkan ID.
 
-```
-POST /api/inventory
-```
-
-Request body:
+Response:
 ```json
 {
-    "item_id": "string",
-    "name": "string",
-    "quantity": 0,
-    "category": "string"
+  "id": 1,
+  "name": "John Doe",
+  "email": "john@example.com"
 }
 ```
 
-Response success (201):
+#### POST /api/users
+Membuat user baru.
+
+Request:
 ```json
 {
-    "id": "string",
-    "name": "string",
-    "quantity": 0,
-    "category": "string",
-    "added_by": "string",
-    "last_update": "datetime string"
+  "name": "John Doe",
+  "email": "john@example.com"
 }
 ```
 
-## Endpoint Transactions
+### Consumer Endpoints
 
-### Get All Transactions
+#### GET /api/users/{id}/transactions
+Mengambil riwayat transaksi user dari OrderService.
 
-```
-GET /api/transactions
-```
+## ProductService API
 
-Query parameters:
-- type: string (optional, "masuk" atau "keluar")
+### Provider Endpoints
 
-Response success (200):
+#### GET /api/products
+Mengambil daftar semua produk.
+
+Response:
 ```json
 [
-    {
-        "id": 0,
-        "type": "string",
-        "item_id": "string",
-        "quantity": 0,
-        "user": "string",
-        "timestamp": "datetime string",
-        "notes": "string"
-    }
+  {
+    "id": 1,
+    "name": "Laptop",
+    "price": 1000,
+    "stock": 10
+  }
 ]
 ```
 
-### Add Incoming Transaction
+#### GET /api/products/{id}
+Mengambil detail produk berdasarkan ID.
 
-```
-POST /api/transactions/incoming
-```
-
-Request body:
+Response:
 ```json
 {
-    "item_id": "string",
-    "quantity": 0,
-    "notes": "string (optional)"
+  "id": 1,
+  "name": "Laptop",
+  "price": 1000,
+  "stock": 10
 }
 ```
 
-Response success (201):
+#### POST /api/products
+Membuat produk baru.
+
+Request:
 ```json
 {
-    "id": 0,
-    "type": "masuk",
-    "item_id": "string",
-    "quantity": 0,
-    "user": "string",
-    "timestamp": "datetime string",
-    "notes": "string"
+  "name": "Laptop",
+  "price": 1000,
+  "stock": 10
 }
 ```
 
-## Endpoint Users
+### Consumer Endpoints
 
-### Get All Users (Admin Only)
+#### GET /api/products/{id}/user
+Mengambil informasi user terkait produk dari UserService.
 
-```
-GET /api/users
-```
+## OrderService API
 
-Response success (200):
-```json
-[
-    {
-        "username": "string",
-        "name": "string",
-        "role": "string"
-    }
-]
-```
+### Provider & Consumer Endpoints
 
-### Add New User (Admin Only)
+#### POST /api/orders
+Membuat order baru (mengonsumsi data dari UserService dan ProductService).
 
-```
-POST /api/users
-```
-
-Request body:
+Request:
 ```json
 {
-    "username": "string",
-    "password": "string",
-    "name": "string",
-    "role": "string"
+  "user_id": 1,
+  "product_id": 1,
+  "quantity": 2
 }
 ```
 
-Response success (201):
+Response:
 ```json
 {
-    "username": "string",
-    "name": "string",
-    "role": "string"
+  "id": 1,
+  "user_id": 1,
+  "product_id": 1,
+  "quantity": 2,
+  "total_price": 2000,
+  "status": "pending"
 }
 ```
 
-## Error Responses
+#### GET /api/orders/{id}
+Mengambil detail order dengan data lengkap dari UserService dan ProductService.
 
-Semua endpoint dapat mengembalikan response error berikut:
-
-400 Bad Request:
+Response:
 ```json
 {
-    "error": "Pesan error validasi"
+  "id": 1,
+  "user_id": 1,
+  "product_id": 1,
+  "quantity": 2,
+  "total_price": 2000,
+  "status": "pending",
+  "user": {
+    "id": 1,
+    "name": "John Doe",
+    "email": "john@example.com"
+  },
+  "product": {
+    "id": 1,
+    "name": "Laptop",
+    "price": 1000,
+    "stock": 10
+  }
 }
 ```
 
-401 Unauthorized:
-```json
-{
-    "error": "Akses ditolak. Silakan login terlebih dahulu."
-}
-```
+#### GET /api/orders
+Mengambil daftar semua order.
 
-403 Forbidden:
-```json
-{
-    "error": "Role tidak memiliki akses ke resource ini"
-}
-```
-
-404 Not Found:
-```json
-{
-    "error": "Resource tidak ditemukan"
-}
-```
-
-500 Internal Server Error:
-```json
-{
-    "error": "Pesan error internal server"
-}
-``` 
+## Komunikasi Antar Layanan
+- OrderService bertindak sebagai consumer untuk UserService dan ProductService
+- UserService bertindak sebagai provider untuk OrderService
+- ProductService bertindak sebagai provider untuk OrderService 
