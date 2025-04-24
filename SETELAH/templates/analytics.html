@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics - Sistem Inventaris{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4">Analytics Dashboard</h2>
+    
+    <div class="row">
+        <!-- Stock Trends -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Tren Stok</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="stockTrendsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transaction Summary -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Ringkasan Transaksi</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body">
+                                    <h6>Total Barang Masuk</h6>
+                                    <h3 id="totalIn">-</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-secondary text-white">
+                                <div class="card-body">
+                                    <h6>Total Barang Keluar</h6>
+                                    <h3 id="totalOut">-</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <h6>Item Paling Aktif</h6>
+                        <div class="table-responsive">
+                            <table class="table" id="activeItemsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Total Transaksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Data will be loaded dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Category Distribution -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Distribusi Kategori</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Low Stock Alerts -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Alert Stok Rendah</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table" id="lowStockTable">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Stok Saat Ini</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data will be loaded dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadAnalytics();
+});
+
+function loadAnalytics() {
+    fetch('/api/analytics/dashboard')
+        .then(response => response.json())
+        .then(data => {
+            updateStockTrends(data.stock_trends);
+            updateTransactionSummary(data.transaction_summary);
+            updateCategoryDistribution(data.category_distribution);
+            updateLowStockAlerts(data.low_stock_alerts);
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+function updateStockTrends(data) {
+    const ctx = document.getElementById('stockTrendsChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+            datasets: [{
+                label: 'Tren Stok',
+                data: [65, 59, 80, 81, 56, 55],
+                fill: false,
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }]
+        }
+    });
+}
+
+function updateTransactionSummary(data) {
+    document.getElementById('totalIn').textContent = data.total_in;
+    document.getElementById('totalOut').textContent = data.total_out;
+    
+    const tbody = document.querySelector('#activeItemsTable tbody');
+    tbody.innerHTML = '';
+    
+    data.most_active_items.forEach(item => {
+        const row = `
+            <tr>
+                <td>${item.name}</td>
+                <td>${item.transaction_count}</td>
+            </tr>
+        `;
+        tbody.insertAdjacentHTML('beforeend', row);
+    });
+}
+
+function updateCategoryDistribution(data) {
+    const ctx = document.getElementById('categoryChart').getContext('2d');
+    const categories = Object.keys(data);
+    const counts = Object.values(data);
+    
+    new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: categories,
+            datasets: [{
+                data: counts,
+                backgroundColor: [
+                    'rgb(255, 99, 132)',
+                    'rgb(54, 162, 235)',
+                    'rgb(255, 205, 86)',
+                    'rgb(75, 192, 192)',
+                    'rgb(153, 102, 255)'
+                ]
+            }]
+        }
+    });
+}
+
+function updateLowStockAlerts(alerts) {
+    const tbody = document.querySelector('#lowStockTable tbody');
+    tbody.innerHTML = '';
+    
+    alerts.forEach(alert => {
+        const row = `
+            <tr>
+                <td>${alert.name}</td>
+                <td>${alert.quantity}</td>
+                <td><span class="badge bg-danger">Stok Rendah</span></td>
+            </tr>
+        `;
+        tbody.insertAdjacentHTML('beforeend', row);
+    });
+}
+</script>
+{% endblock %} 

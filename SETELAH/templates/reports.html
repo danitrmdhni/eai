@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}Laporan - Sistem Inventaris{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4">Laporan</h2>
+    
+    <div class="row">
+        <!-- Inventory Levels Report -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Laporan Level Inventaris</h5>
+                    <button class="btn btn-primary btn-sm" onclick="generateInventoryReport()">
+                        <i class="bx bx-download"></i> Export
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table" id="inventoryLevelsTable">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Stok</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data will be loaded dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transaction History Report -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Riwayat Transaksi</h5>
+                    <div>
+                        <button class="btn btn-primary btn-sm" onclick="generateTransactionReport()">
+                            <i class="bx bx-download"></i> Export
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="row g-2">
+                            <div class="col-md-5">
+                                <input type="date" class="form-control" id="startDate">
+                            </div>
+                            <div class="col-md-5">
+                                <input type="date" class="form-control" id="endDate">
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-secondary w-100" onclick="filterTransactions()">
+                                    <i class="bx bx-filter"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table" id="transactionHistoryTable">
+                            <thead>
+                                <tr>
+                                    <th>Tanggal</th>
+                                    <th>Tipe</th>
+                                    <th>Item</th>
+                                    <th>Jumlah</th>
+                                    <th>User</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data will be loaded dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadInventoryLevels();
+    loadTransactionHistory();
+});
+
+function loadInventoryLevels() {
+    fetch('/api/reports/inventory-levels')
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.querySelector('#inventoryLevelsTable tbody');
+            tbody.innerHTML = '';
+            
+            Object.entries(data.inventory_levels).forEach(([itemId, item]) => {
+                const status = item.quantity < 10 ? 
+                    '<span class="badge bg-danger">Stok Rendah</span>' : 
+                    '<span class="badge bg-success">Normal</span>';
+                
+                const row = `
+                    <tr>
+                        <td>${item.name}</td>
+                        <td>${item.quantity}</td>
+                        <td>${status}</td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', row);
+            });
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+function loadTransactionHistory() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    
+    let url = '/api/reports/transaction-history';
+    if (startDate && endDate) {
+        url += `?start_date=${startDate}&end_date=${endDate}`;
+    }
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.querySelector('#transactionHistoryTable tbody');
+            tbody.innerHTML = '';
+            
+            data.transactions.forEach(transaction => {
+                const row = `
+                    <tr>
+                        <td>${transaction.timestamp}</td>
+                        <td>${transaction.type === 'masuk' ? 'Barang Masuk' : 'Barang Keluar'}</td>
+                        <td>${transaction.item_id}</td>
+                        <td>${transaction.quantity}</td>
+                        <td>${transaction.user}</td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', row);
+            });
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+function filterTransactions() {
+    loadTransactionHistory();
+}
+
+function generateInventoryReport() {
+    window.location.href = '/api/reports/export?type=inventory';
+}
+
+function generateTransactionReport() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    let url = '/api/reports/export?type=transactions';
+    if (startDate && endDate) {
+        url += `&start_date=${startDate}&end_date=${endDate}`;
+    }
+    window.location.href = url;
+}
+</script>
+{% endblock %} 

@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}Pengaturan Notifikasi - Sistem Inventaris{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4">Pengaturan Notifikasi</h2>
+    
+    <div class="row">
+        <!-- Notification Settings -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Pengaturan Umum</h5>
+                </div>
+                <div class="card-body">
+                    <form id="notificationSettingsForm">
+                        <div class="mb-4">
+                            <h6>Notifikasi Email</h6>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="emailNotifications">
+                                <label class="form-check-label" for="emailNotifications">
+                                    Aktifkan notifikasi email
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h6>Frekuensi Notifikasi</h6>
+                            <select class="form-select" id="notificationFrequency">
+                                <option value="realtime">Real-time</option>
+                                <option value="daily">Harian</option>
+                                <option value="weekly">Mingguan</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-4">
+                            <h6>Batas Stok Rendah</h6>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="lowStockThreshold" min="0">
+                                <span class="input-group-text">unit</span>
+                            </div>
+                            <small class="text-muted">Notifikasi akan dikirim ketika stok di bawah batas ini</small>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bx bx-save"></i> Simpan Pengaturan
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notification Rules -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Aturan Notifikasi</h5>
+                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addRuleModal">
+                        <i class="bx bx-plus"></i> Tambah Aturan
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table" id="notificationRulesTable">
+                            <thead>
+                                <tr>
+                                    <th>Tipe</th>
+                                    <th>Kondisi</th>
+                                    <th>Status</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Stok Rendah</td>
+                                    <td>Kurang dari 10 unit</td>
+                                    <td><span class="badge bg-success">Aktif</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-warning">
+                                            <i class="bx bx-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-danger">
+                                            <i class="bx bx-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Transaksi Besar</td>
+                                    <td>Lebih dari 100 unit</td>
+                                    <td><span class="badge bg-success">Aktif</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-warning">
+                                            <i class="bx bx-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-danger">
+                                            <i class="bx bx-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Rule Modal -->
+<div class="modal fade" id="addRuleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Tambah Aturan Notifikasi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addRuleForm">
+                    <div class="mb-3">
+                        <label for="ruleType" class="form-label">Tipe Notifikasi</label>
+                        <select class="form-select" id="ruleType">
+                            <option value="low_stock">Stok Rendah</option>
+                            <option value="large_transaction">Transaksi Besar</option>
+                            <option value="expired">Mendekati Kadaluarsa</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="ruleCondition" class="form-label">Kondisi</label>
+                        <input type="text" class="form-control" id="ruleCondition">
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="ruleStatus" checked>
+                            <label class="form-check-label" for="ruleStatus">Aktif</label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-primary" onclick="saveRule()">Simpan</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadNotificationSettings();
+});
+
+function loadNotificationSettings() {
+    fetch('/api/notifications/settings')
+        .then(response => response.json())
+        .then(settings => {
+            document.getElementById('emailNotifications').checked = settings.email_notifications;
+            document.getElementById('notificationFrequency').value = settings.notification_frequency;
+            document.getElementById('lowStockThreshold').value = settings.low_stock_threshold;
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+document.getElementById('notificationSettingsForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const settings = {
+        email_notifications: document.getElementById('emailNotifications').checked,
+        notification_frequency: document.getElementById('notificationFrequency').value,
+        low_stock_threshold: parseInt(document.getElementById('lowStockThreshold').value)
+    };
+    
+    fetch('/api/notifications/settings', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settings)
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert('Pengaturan notifikasi berhasil disimpan');
+    })
+    .catch(error => console.error('Error:', error));
+});
+
+function saveRule() {
+    const rule = {
+        type: document.getElementById('ruleType').value,
+        condition: document.getElementById('ruleCondition').value,
+        active: document.getElementById('ruleStatus').checked
+    };
+    
+    // Implementation for saving notification rule
+    alert('Fitur tambah aturan notifikasi akan segera tersedia');
+    $('#addRuleModal').modal('hide');
+}
+</script>
+{% endblock %} 

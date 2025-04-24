@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block title %}Pengaturan Inventaris - Sistem Inventaris{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4">Pengaturan Inventaris</h2>
+    
+    <div class="row">
+        <!-- Category Management -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Manajemen Kategori</h5>
+                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
+                        <i class="bx bx-plus"></i> Tambah Kategori
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table" id="categoriesTable">
+                            <thead>
+                                <tr>
+                                    <th>Kategori</th>
+                                    <th>Jumlah Item</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data will be loaded dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stock Thresholds -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Pengaturan Batas Stok</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table" id="thresholdsTable">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Batas Minimum</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data will be loaded dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Category Modal -->
+<div class="modal fade" id="addCategoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Tambah Kategori Baru</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addCategoryForm">
+                    <div class="mb-3">
+                        <label for="categoryName" class="form-label">Nama Kategori</label>
+                        <input type="text" class="form-control" id="categoryName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="categoryDescription" class="form-label">Deskripsi</label>
+                        <textarea class="form-control" id="categoryDescription" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-primary" onclick="saveCategory()">Simpan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Threshold Modal -->
+<div class="modal fade" id="editThresholdModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Batas Stok</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editThresholdForm">
+                    <input type="hidden" id="thresholdItemId">
+                    <div class="mb-3">
+                        <label for="thresholdValue" class="form-label">Batas Minimum Stok</label>
+                        <input type="number" class="form-control" id="thresholdValue" min="0" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-primary" onclick="saveThreshold()">Simpan</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadCategories();
+    loadThresholds();
+});
+
+function loadCategories() {
+    fetch('/api/inventory/categories')
+        .then(response => response.json())
+        .then(categories => {
+            const tbody = document.querySelector('#categoriesTable tbody');
+            tbody.innerHTML = '';
+            
+            categories.forEach(category => {
+                const row = `
+                    <tr>
+                        <td>${category}</td>
+                        <td>-</td>
+                        <td>
+                            <button class="btn btn-sm btn-warning" onclick="editCategory('${category}')">
+                                <i class="bx bx-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteCategory('${category}')">
+                                <i class="bx bx-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', row);
+            });
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+function loadThresholds() {
+    fetch('/api/inventory')
+        .then(response => response.json())
+        .then(items => {
+            const tbody = document.querySelector('#thresholdsTable tbody');
+            tbody.innerHTML = '';
+            
+            items.forEach(item => {
+                const row = `
+                    <tr>
+                        <td>${item.name}</td>
+                        <td>${item.min_threshold || '-'}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="editThreshold('${item.id}')">
+                                <i class="bx bx-edit"></i> Set Batas
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', row);
+            });
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+function saveCategory() {
+    const name = document.getElementById('categoryName').value;
+    const description = document.getElementById('categoryDescription').value;
+    
+    fetch('/api/inventory/categories', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, description })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert('Kategori berhasil ditambahkan');
+        loadCategories();
+        $('#addCategoryModal').modal('hide');
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function editThreshold(itemId) {
+    document.getElementById('thresholdItemId').value = itemId;
+    $('#editThresholdModal').modal('show');
+}
+
+function saveThreshold() {
+    const itemId = document.getElementById('thresholdItemId').value;
+    const threshold = parseInt(document.getElementById('thresholdValue').value);
+    
+    fetch(`/api/inventory/set-threshold/${itemId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ threshold })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert('Batas stok berhasil diperbarui');
+        loadThresholds();
+        $('#editThresholdModal').modal('hide');
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function editCategory(category) {
+    // Implementation for editing category
+    alert('Fitur edit kategori akan segera tersedia');
+}
+
+function deleteCategory(category) {
+    if (confirm(`Apakah Anda yakin ingin menghapus kategori "${category}"?`)) {
+        // Implementation for deleting category
+        alert('Fitur hapus kategori akan segera tersedia');
+    }
+}
+</script>
+{% endblock %} 

@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Manajer{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Sidebar -->
+        <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+            <div class="position-sticky pt-3">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#overview">
+                            <i class="bi bi-house"></i> Overview
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#approvals">
+                            <i class="bi bi-check-circle"></i> Persetujuan
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#reports">
+                            <i class="bi bi-file-text"></i> Laporan
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#analytics">
+                            <i class="bi bi-graph-up"></i> Analitik
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#settings">
+                            <i class="bi bi-gear"></i> Pengaturan
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <!-- Overview Section -->
+            <section id="overview" class="mb-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h2>Overview</h2>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="refreshDashboard">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Quick Stats Cards -->
+                <div class="row" id="quickStats">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+            </section>
+
+            <!-- Approval Requests Section -->
+            <section id="approvals" class="mb-4">
+                <h3>Permintaan Persetujuan</h3>
+                <div class="card">
+                    <div class="card-body">
+                        <div id="approvalRequestsList">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Analytics Section -->
+            <section id="analytics" class="mb-4">
+                <h3>Analitik Inventory</h3>
+                <div class="row">
+                    <!-- Stock Trends Chart -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                Tren Stok
+                            </div>
+                            <div class="card-body">
+                                <canvas id="stockTrendsChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Category Distribution Chart -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                Distribusi Kategori
+                            </div>
+                            <div class="card-body">
+                                <canvas id="categoryDistributionChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Reports Section -->
+            <section id="reports" class="mb-4">
+                <h3>Laporan</h3>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col">
+                                <label for="reportType">Jenis Laporan:</label>
+                                <select class="form-select" id="reportType">
+                                    <option value="inventory">Laporan Inventory</option>
+                                    <option value="transactions">Laporan Transaksi</option>
+                                    <option value="categories">Laporan Kategori</option>
+                                </select>
+                            </div>
+                            <div class="col">
+                                <label for="reportFormat">Format:</label>
+                                <select class="form-select" id="reportFormat">
+                                    <option value="csv">CSV</option>
+                                    <option value="excel">Excel</option>
+                                    <option value="pdf">PDF</option>
+                                </select>
+                            </div>
+                            <div class="col-auto">
+                                <button class="btn btn-primary mt-4" id="generateReport">
+                                    <i class="bi bi-download"></i> Export
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section id="settings" class="mb-4">
+                <h3>Pengaturan</h3>
+                <div class="card">
+                    <div class="card-body">
+                        <form id="notificationSettingsForm">
+                            <div class="mb-3">
+                                <label for="lowStockThreshold" class="form-label">Batas Stok Rendah</label>
+                                <input type="number" class="form-control" id="lowStockThreshold" min="1">
+                            </div>
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="emailNotifications">
+                                <label class="form-check-label" for="emailNotifications">Aktifkan Notifikasi Email</label>
+                            </div>
+                            <div class="mb-3">
+                                <label for="notificationFrequency" class="form-label">Frekuensi Notifikasi</label>
+                                <select class="form-select" id="notificationFrequency">
+                                    <option value="realtime">Real-time</option>
+                                    <option value="daily">Harian</option>
+                                    <option value="weekly">Mingguan</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Simpan Pengaturan</button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load initial data
+    loadDashboardData();
+    loadApprovalRequests();
+    loadAnalytics();
+    loadNotificationSettings();
+
+    // Refresh button handler
+    document.getElementById('refreshDashboard').addEventListener('click', function() {
+        loadDashboardData();
+    });
+
+    // Settings form handler
+    document.getElementById('notificationSettingsForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        saveNotificationSettings();
+    });
+
+    // Report generation handler
+    document.getElementById('generateReport').addEventListener('click', function() {
+        const type = document.getElementById('reportType').value;
+        const format = document.getElementById('reportFormat').value;
+        exportReport(type, format);
+    });
+});
+
+function loadDashboardData() {
+    fetch('/api/analytics/dashboard')
+        .then(response => response.json())
+        .then(data => {
+            updateQuickStats(data);
+            updateCharts(data);
+        })
+        .catch(error => console.error('Error loading dashboard data:', error));
+}
+
+function updateQuickStats(data) {
+    const statsHTML = `
+        <div class="col-md-3 mb-4">
+            <div class="card border-left-primary h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Items
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                ${data.transaction_summary.total_in}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Add more stat cards here -->
+    `;
+    document.getElementById('quickStats').innerHTML = statsHTML;
+}
+
+function updateCharts(data) {
+    // Update Stock Trends Chart
+    const trendsCtx = document.getElementById('stockTrendsChart').getContext('2d');
+    new Chart(trendsCtx, {
+        type: 'line',
+        data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+            datasets: [{
+                label: 'Stock Trends',
+                data: [12, 19, 3, 5, 2, 3],
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }]
+        }
+    });
+
+    // Update Category Distribution Chart
+    const categoryCtx = document.getElementById('categoryDistributionChart').getContext('2d');
+    const categoryData = data.category_distribution;
+    new Chart(categoryCtx, {
+        type: 'pie',
+        data: {
+            labels: Object.keys(categoryData),
+            datasets: [{
+                data: Object.values(categoryData),
+                backgroundColor: [
+                    'rgb(255, 99, 132)',
+                    'rgb(54, 162, 235)',
+                    'rgb(255, 205, 86)'
+                ]
+            }]
+        }
+    });
+}
+
+function loadNotificationSettings() {
+    fetch('/api/notifications/settings')
+        .then(response => response.json())
+        .then(settings => {
+            document.getElementById('lowStockThreshold').value = settings.low_stock_threshold;
+            document.getElementById('emailNotifications').checked = settings.email_notifications;
+            document.getElementById('notificationFrequency').value = settings.notification_frequency;
+        })
+        .catch(error => console.error('Error loading notification settings:', error));
+}
+
+function saveNotificationSettings() {
+    const settings = {
+        low_stock_threshold: parseInt(document.getElementById('lowStockThreshold').value),
+        email_notifications: document.getElementById('emailNotifications').checked,
+        notification_frequency: document.getElementById('notificationFrequency').value
+    };
+
+    fetch('/api/notifications/settings', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(settings)
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert('Pengaturan berhasil disimpan');
+    })
+    .catch(error => console.error('Error saving settings:', error));
+}
+
+function exportReport(type, format) {
+    window.location.href = `/api/reports/export?type=${type}&format=${format}`;
+}
+</script>
+{% endblock %} 

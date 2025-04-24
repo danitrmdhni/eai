@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Persetujuan Transaksi - Sistem Inventaris{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4">Persetujuan Transaksi</h2>
+    
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Daftar Transaksi Menunggu Persetujuan</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped" id="approvalsTable">
+                    <thead>
+                        <tr>
+                            <th>ID Transaksi</th>
+                            <th>Tipe</th>
+                            <th>Item</th>
+                            <th>Jumlah</th>
+                            <th>Operator</th>
+                            <th>Tanggal</th>
+                            <th>Status</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Data will be loaded dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadPendingTransactions();
+});
+
+function loadPendingTransactions() {
+    fetch('/api/inventory/approval-requests')
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.querySelector('#approvalsTable tbody');
+            tbody.innerHTML = '';
+            
+            data.forEach(transaction => {
+                const row = `
+                    <tr>
+                        <td>${transaction.id}</td>
+                        <td>${transaction.type === 'masuk' ? 'Barang Masuk' : 'Barang Keluar'}</td>
+                        <td>${transaction.item_id}</td>
+                        <td>${transaction.quantity}</td>
+                        <td>${transaction.user}</td>
+                        <td>${transaction.timestamp}</td>
+                        <td><span class="badge bg-warning">Menunggu</span></td>
+                        <td>
+                            <button class="btn btn-success btn-sm" onclick="approveTransaction(${transaction.id})">
+                                <i class="bx bx-check"></i> Setuju
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="rejectTransaction(${transaction.id})">
+                                <i class="bx bx-x"></i> Tolak
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', row);
+            });
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+function approveTransaction(transactionId) {
+    fetch(`/api/inventory/approve-transaction/${transactionId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert('Transaksi berhasil disetujui');
+        loadPendingTransactions();
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function rejectTransaction(transactionId) {
+    // Implementation for rejection
+    alert('Fitur penolakan transaksi akan segera tersedia');
+}
+</script>
+{% endblock %} 
